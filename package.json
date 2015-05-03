@@ -1,0 +1,15 @@
+{
+  "name": "hs-webapp",
+  "version": "0.1.0",
+  "description": "\"Let's rewrite website in Haskell\"",
+  "main": "js/app.js",
+  "files": [
+    "js/"
+  ],
+  "devDependencies": {
+    "webpack": "~1.8.10",
+    "webpack-dev-server": "~1.8.2",
+    "babel-loader": "~5.0.0",
+    "babel-core": "~5.1.13"
+  }
+}

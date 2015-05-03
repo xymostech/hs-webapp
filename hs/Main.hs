@@ -9,14 +9,19 @@ import Network.Wai                    ( Application, Response, Request
                                       , rawPathInfo, rawQueryString
                                       , pathInfo, requestMethod, responseStatus
                                       )
+import System.Environment             (getArgs)
 import Text.Show.ByteString           (show)
 import Network.Wai.Handler.Warp       (run)
 
 import Static                         (staticHandler)
-import Util                           (notFoundResponse, serverErrorResponse)
+import Util                           ( plainFileResponse
+                                      , notFoundResponse
+                                      , serverErrorResponse
+                                      )
+import qualified Logging
 
 main :: IO ()
-main = run 3000 app
+main = run 7000 app
 
 printStatusLine :: Request -> Response -> IO ()
 printStatusLine req resp =
@@ -29,15 +34,18 @@ printStatusLine req resp =
 
 app :: Application
 app req sendResponse = handle (\err -> handleError err req >>= sendResponse) $ do
-  resp <- handler req
+  -- TODO(emily): move this into main
+  debug <- isDebug
+  resp <- (chooseHandler req debug) req
   printStatusLine req resp
   sendResponse resp
-  where
-    handler = chooseHandler req
 
-chooseHandler :: Request -> (Request -> IO Response)
-chooseHandler req = case path of
-  "static":_ -> staticHandler
+chooseHandler :: Request -> Bool -> (Request -> IO Response)
+chooseHandler req debug = case (path, debug) of
+  ([], False) -> \x -> plainFileResponse "static/index.html" "text/html"
+  ([], True) -> \x -> plainFileResponse "static/index-debug.html" "text/html"
+  ("static":_, _) -> staticHandler
+  ("build":_, _) -> staticHandler
   _ -> \x -> notFoundResponse
   where
     path = pathInfo req
@@ -47,3 +55,6 @@ handleError ex req = do
   resp <- serverErrorResponse
   printStatusLine req resp
   return resp
+
+isDebug :: IO Bool
+isDebug = getArgs >>= return . any (=="--debug")
