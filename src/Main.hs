@@ -35,7 +35,6 @@ app req sendResponse = handle (\err -> handleError err req >>= sendResponse) $ d
   where
     handler = chooseHandler req
 
-
 chooseHandler :: Request -> (Request -> IO Response)
 chooseHandler req = case path of
   "static":_ -> staticHandler
