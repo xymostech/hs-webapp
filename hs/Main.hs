@@ -42,11 +42,10 @@ app req sendResponse = handle (\err -> handleError err req >>= sendResponse) $ d
 
 chooseHandler :: Request -> Bool -> (Request -> IO Response)
 chooseHandler req debug = case (path, debug) of
-  ([], False) -> \x -> plainFileResponse "static/index.html" "text/html"
-  ([], True) -> \x -> plainFileResponse "static/index-debug.html" "text/html"
   ("static":_, _) -> staticHandler
   ("build":_, _) -> staticHandler
-  _ -> \x -> notFoundResponse
+  (_, False) -> \x -> plainFileResponse "static/index.html" "text/html"
+  (_, True) -> \x -> plainFileResponse "static/index-debug.html" "text/html"
   where
     path = pathInfo req
 

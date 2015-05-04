@@ -11,7 +11,8 @@
     "js/"
   ],
   "dependencies": {
-    "react": "~0.13.2"
+    "react": "~0.13.2",
+    "lodash": "~3.8.0"
   },
   "devDependencies": {
     "webpack": "~1.8.10",
