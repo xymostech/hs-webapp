@@ -3,6 +3,10 @@
   "version": "0.1.0",
   "description": "\"Let's rewrite website in Haskell\"",
   "main": "js/app.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xymostech/hs-webapp.git"
+  },
   "files": [
     "js/"
   ],
