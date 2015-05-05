@@ -7,7 +7,7 @@ module Util
 where
 
 import Prelude hiding (readFile)
-import Network.Wai              (Response, Request, responseLBS)
+import Network.Wai              (Response, Request, responseFile)
 import Network.HTTP.Types       (status200, status404, status500)
 import System.Directory         (doesFileExist)
 import Data.ByteString          (ByteString)
@@ -17,17 +17,13 @@ plainFileResponse :: FilePath -> ByteString -> IO Response
 plainFileResponse path mimeType = do
   fileExists <- doesFileExist path
   if fileExists
-  then do
-    fileData <- readFile path
-    return $ responseLBS status200 [("Content-Type", mimeType)] fileData
+  then return $ responseFile status200 [("Content-Type", mimeType)] path Nothing
   else notFoundResponse
 
 notFoundResponse :: IO Response
 notFoundResponse = do
-  fileData <- readFile "static/404.html"
-  return $ responseLBS status404 [("Content-Type", "text/html")] fileData
+  return $ responseFile status404 [("Content-Type", "text/html")] "static/404.html" Nothing
 
 serverErrorResponse :: IO Response
 serverErrorResponse = do
-  fileData <- readFile "static/500.html"
-  return $ responseLBS status500 [("Content-Type", "text/html")] fileData
+  return $ responseFile status500 [("Content-Type", "text/html")] "static/500.html" Nothing
