@@ -1,10 +1,7 @@
-const React = require("react");
-const _ = require("lodash");
+import React from "react";
+import _ from "lodash";
 
-const {
-    splitPath,
-    matchPath
-} = require("./utils.js");
+import { splitPath, matchPath } from "./utils.js";
 
 const Router = React.createClass({
     propTypes: {
@@ -39,4 +36,4 @@ const Router = React.createClass({
 
 });
 
-module.exports = Router;
+export default Router;

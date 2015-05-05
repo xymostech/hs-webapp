@@ -1,6 +1,7 @@
-const React = require("react");
+import React from "react";
+import _ from "lodash";
 
-const Router = require("./router/Router.js");
+import Router from "./router/Router.js";
 
 const Test = React.createClass({
     render: function() {
@@ -41,5 +42,5 @@ const MainApp = React.createClass({
 
 React.render(<MainApp location={window.location} />, document.body);
 
-window._ = require("lodash");
-window.React = require("react/addons");
+window._ = _;
+window.React = React;

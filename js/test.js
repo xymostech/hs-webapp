@@ -1,14 +1,14 @@
-const _ = require("lodash");
+import _ from "lodash";
 
 const describeStack = [];
-const describe = function(name, func) {
+export const describe = function(name, func) {
     describeStack.push(name);
     func();
     describeStack.pop();
 };
 
 const runTests = [];
-const it = function(name, func) {
+export const it = function(name, func) {
     try {
         func();
 
@@ -33,11 +33,6 @@ const printResults = function() {
             console.log("\u2717", test.name + ": " + test.message);
         }
     });
-};
-
-module.exports = {
-    describe,
-    it
 };
 
 if (require.main === module) {
