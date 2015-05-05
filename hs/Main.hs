@@ -13,6 +13,7 @@ import System.Environment             (getArgs)
 import Text.Show.ByteString           (show)
 import Network.Wai.Handler.Warp       (run)
 
+import Api.Api                        (apiHandler)
 import Static                         (staticHandler)
 import Util                           ( plainFileResponse
                                       , notFoundResponse
@@ -44,6 +45,7 @@ chooseHandler :: Request -> Bool -> (Request -> IO Response)
 chooseHandler req debug = case (path, debug) of
   ("static":_, _) -> staticHandler
   ("build":_, _) -> staticHandler
+  ("api":_, _) -> apiHandler
   (_, False) -> \x -> plainFileResponse "static/index.html" "text/html"
   (_, True) -> \x -> plainFileResponse "static/index-debug.html" "text/html"
   where
