@@ -1,20 +1,21 @@
 import _ from "lodash";
 
-const describeStack = [];
-export const describe = function(name, func) {
+const describeStack: Array<string> = [];
+export const describe = function(name: string, func: Function) {
     describeStack.push(name);
     func();
     describeStack.pop();
 };
 
-const runTests = [];
-export const it = function(name, func) {
+const runTests: Array<{succeed: boolean; name: string; message: string}> = [];
+export const it = function(name: string, func: Function) {
     try {
         func();
 
         runTests.push({
             succeed: true,
-            name: describeStack.join(" ") + " " + name
+            name: describeStack.join(" ") + " " + name,
+            message: ""
         });
     } catch (e) {
         runTests.push({
