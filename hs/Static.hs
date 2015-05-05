@@ -4,14 +4,15 @@ module Static
 )
 where
 
-import Data.Text                 (concat, unpack, pack)
-import Network.Mime              (defaultMimeLookup)
-import Network.Wai               (Application, Response, Request, pathInfo)
-import System.FilePath           (joinPath)
+import Data.Text              (concat, unpack, pack)
+import Network.Mime           (defaultMimeLookup)
+import Network.Wai            (Application, Response, Request, pathInfo)
+import System.FilePath        (joinPath)
 
-import Util (plainFileResponse)
+import Handler                (Handler)
+import Util                   (plainFileResponse)
 
-staticHandler :: Request -> IO Response
+staticHandler :: Request -> Handler
 staticHandler req =
   plainFileResponse filePath mimeType
   where

@@ -2,3 +2,4 @@ dist
 .cabal-sandbox
 node_modules
 build
+datastore.sqlite

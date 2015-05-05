@@ -28,6 +28,8 @@ executable hs-webapp
                      , http-types >= 0.8
                      , lifted-base >= 0.1
                      , mime-types >= 0.1
+                     , mtl >= 2.1
+                     , sqlite-simple >= 0.4.8
                      , text >= 1.2
                      , transformers >=0.3 && <0.4
                      , wai >= 3.0

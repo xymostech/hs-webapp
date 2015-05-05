@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 import Control.Exception.Lifted       (handle)
 import Control.Exception              (SomeException)
+import Control.Monad.IO.Class         (liftIO)
 import Data.ByteString.Lazy           (toStrict)
 import qualified Data.ByteString as B (intercalate, concat)
 import qualified Data.ByteString.Char8 as C (putStrLn)
@@ -14,6 +15,7 @@ import Text.Show.ByteString           (show)
 import Network.Wai.Handler.Warp       (run)
 
 import Api.Api                        (apiHandler)
+import Handler                        (Handler, runHandler)
 import Static                         (staticHandler)
 import Util                           ( plainFileResponse
                                       , notFoundResponse
@@ -34,14 +36,15 @@ printStatusLine req resp =
     ]
 
 app :: Application
-app req sendResponse = handle (\err -> handleError err req >>= sendResponse) $ do
-  -- TODO(emily): move this into main
-  debug <- isDebug
-  resp <- (chooseHandler req debug) req
-  printStatusLine req resp
-  sendResponse resp
+app req sendResponse =
+  handle (\err -> runHandler (handleError err req) >>= sendResponse) $ do
+    -- TODO(emily): move this into main
+    debug <- isDebug
+    resp <- runHandler $ (chooseHandler req debug) req
+    printStatusLine req resp
+    sendResponse resp
 
-chooseHandler :: Request -> Bool -> (Request -> IO Response)
+chooseHandler :: Request -> Bool -> (Request -> Handler)
 chooseHandler req debug = case (path, debug) of
   ("static":_, _) -> staticHandler
   ("build":_, _) -> staticHandler
@@ -51,10 +54,10 @@ chooseHandler req debug = case (path, debug) of
   where
     path = pathInfo req
 
-handleError :: SomeException -> Request -> IO Response
+handleError :: SomeException -> Request -> Handler
 handleError ex req = do
   resp <- serverErrorResponse
-  printStatusLine req resp
+  liftIO $ printStatusLine req resp
   return resp
 
 isDebug :: IO Bool
