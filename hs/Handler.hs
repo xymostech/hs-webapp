@@ -1,22 +1,27 @@
 module Handler
 ( Handler
 , runHandler
+, dbConnection
+, ask
+, asks
 )
 where
 
-import Control.Monad.Reader   (ReaderT, runReaderT)
-import Database.SQLite.Simple (Connection, open)
+import Control.Monad.Reader   (ReaderT, runReaderT, ask, asks)
+import Database.SQLite.Simple (Connection, open, close)
 import Network.Wai            (Response)
 
 data HandlerData = HandlerData
   { dbConnection :: Connection
   }
 
-type Handler = ReaderT HandlerData IO Response
+type Handler a = ReaderT HandlerData IO a
 
-runHandler :: Handler -> IO Response
+runHandler :: Handler Response -> IO Response
 runHandler handler = do
   connection <- open "datastore.sqlite"
-  runReaderT handler
-             HandlerData { dbConnection = connection
-                         }
+  resp <- runReaderT handler
+                     HandlerData { dbConnection = connection
+                                 }
+  close connection
+  return resp

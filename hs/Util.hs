@@ -14,17 +14,17 @@ import System.Directory         (doesFileExist)
 
 import Handler                  (Handler)
 
-plainFileResponse :: FilePath -> ByteString -> Handler
+plainFileResponse :: FilePath -> ByteString -> Handler Response
 plainFileResponse path mimeType = do
   fileExists <- liftIO $ doesFileExist path
   if fileExists
   then return $ responseFile status200 [("Content-Type", mimeType)] path Nothing
   else notFoundResponse
 
-notFoundResponse :: Handler
+notFoundResponse :: Handler Response
 notFoundResponse = do
   return $ responseFile status404 [("Content-Type", "text/html")] "static/404.html" Nothing
 
-serverErrorResponse :: Handler
+serverErrorResponse :: Handler Response
 serverErrorResponse = do
   return $ responseFile status500 [("Content-Type", "text/html")] "static/500.html" Nothing

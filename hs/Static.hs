@@ -12,7 +12,7 @@ import System.FilePath        (joinPath)
 import Handler                (Handler)
 import Util                   (plainFileResponse)
 
-staticHandler :: Request -> Handler
+staticHandler :: Request -> Handler Response
 staticHandler req =
   plainFileResponse filePath mimeType
   where

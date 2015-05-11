@@ -44,7 +44,7 @@ app req sendResponse =
     printStatusLine req resp
     sendResponse resp
 
-chooseHandler :: Request -> Bool -> (Request -> Handler)
+chooseHandler :: Request -> Bool -> (Request -> Handler Response)
 chooseHandler req debug = case (path, debug) of
   ("static":_, _) -> staticHandler
   ("build":_, _) -> staticHandler
@@ -54,7 +54,7 @@ chooseHandler req debug = case (path, debug) of
   where
     path = pathInfo req
 
-handleError :: SomeException -> Request -> Handler
+handleError :: SomeException -> Request -> Handler Response
 handleError ex req = do
   resp <- serverErrorResponse
   liftIO $ printStatusLine req resp

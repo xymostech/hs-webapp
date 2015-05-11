@@ -11,11 +11,11 @@ import Handler            (Handler)
 
 import Api.Misc           (pingHandler)
 
-unknownApiHandler :: Handler
+unknownApiHandler :: Handler Response
 unknownApiHandler =
   return $ responseLBS status404 [] "Invalid API Request"
 
-apiHandler :: Request -> Handler
+apiHandler :: Request -> Handler Response
 apiHandler req = case path of
   ["api", "v1", "ping"] -> pingHandler req
   _ -> unknownApiHandler
