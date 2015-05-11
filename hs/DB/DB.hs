@@ -1,6 +1,5 @@
 {-# LANGUAGE OverloadedStrings,
              DataKinds,
-             ExistentialQuantification,
              TypeFamilies,
              FlexibleContexts,
              GADTs,
@@ -9,16 +8,15 @@ module DB.DB
 ( dbSetup
 , TestData(TestData)
 , testId, testName
-, query
+, query, query'
 , QueryComparator((:=:))
 , DBInt(DBInt, dbInt), DBText(DBText, dbText)
 )
 where
 
-import Prelude                hiding (concat)
 import Control.Applicative    ((<$>), (<*>))
 import Control.Monad.IO.Class (liftIO)
-import Data.Text              (Text, intercalate, concat, append)
+import Data.Text as T         (Text, intercalate, concat, append)
 import Data.String            (fromString)
 import Database.SQLite.Simple ( FromRow(fromRow)
                               , NamedParam
@@ -35,28 +33,25 @@ import Handler
 
 import DB.Types
 
-data DBField a = forall f . DBFieldType f => MkField f
-class FromRow a => DBType a where
-  mkField :: DBFieldType (a -> f) => (a -> f) -> DBField a
-  mkField = MkField
-
-  dbName :: a -> Text
-  dbFields :: a -> [DBField a]
-
 data TestData = TestData
-  { testId :: DBInt "id"
+  { testKey :: DBKey
+  , testId :: DBInt "id"
   , testName :: DBText "name"
+  , testRef :: Maybe (DBForeignKey TestData "friend")
   }
   deriving Show
 
 instance DBType TestData where
-  dbName _ = "TestData"
-  dbFields _ = [mkField testId, mkField testName]
+  key = testKey
+  name _ = "TestData"
+  fields _ = [ mkField testKey
+             , mkField testId
+             , mkField testName
+             , mkField testRef
+             ]
 
 instance FromRow TestData where
-  fromRow = TestData <$> field <*> field
-
-type TableName = Text
+  fromRow = TestData <$> field <*> field <*> field <*> field
 
 data QueryComparator a where
   (:=:) :: (DBFieldType (a -> f), ToField v) => (a -> f) -> v -> QueryComparator a
@@ -65,7 +60,7 @@ paramFromComparator :: QueryComparator a -> NamedParam
 paramFromComparator (k :=: v) = (append "@" $ keyName k) := v
 
 selectorFromComparator :: QueryComparator a -> Text
-selectorFromComparator (k :=: _) = concat [n, "=@", n]
+selectorFromComparator (k :=: _) = T.concat [n, "=@", n]
   where
     n = keyName k
 
@@ -82,10 +77,10 @@ query' comparators conn = do
   queryNamed conn query namedParams
   where
     namedParams = map paramFromComparator comparators
-    query = makeQuery $ concat
+    query = makeQuery $ T.concat
       [ "SELECT * FROM "
-      , dbName (undefined :: a)
-      , " WHERE "
+      , name (undefined :: a)
+      , if null comparators then "" else " WHERE "
       , intercalate " AND " $ map selectorFromComparator comparators
       ]
 
@@ -94,14 +89,15 @@ setupTable conn = do
   execute_ conn query
   return undefined
   where
-    name = dbName (undefined :: a)
-    fields = dbFields (undefined :: a)
-    query = makeQuery $ concat
+    fieldDefs = map (\(MkField f) -> createStatement f) $
+                    fields (undefined :: a)
+    fieldConstraints = Prelude.concat $ map (\(MkField f) -> constraints f) $
+                                            fields (undefined :: a)
+    query = makeQuery $ T.concat
       [ "CREATE TABLE IF NOT EXISTS "
-      , name
+      , name (undefined :: a)
       , "("
-      , intercalate ", " $ map (\(MkField f) -> concat [keyName f, " ", typeName f])
-                               fields
+      , intercalate ", " $ fieldDefs ++ fieldConstraints
       , ")"
       ]
 
