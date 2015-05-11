@@ -31,6 +31,7 @@ executable hs-webapp
                      , mtl >= 2.1
                      , sqlite-simple >= 0.4.8
                      , text >= 1.2
+                     , time >= 1.5
                      , transformers >=0.3
                      , wai >= 3.0
                      , wai-conduit >= 3.0

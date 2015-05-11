@@ -40,6 +40,7 @@ data TestData = TestData
   { testKey :: DBKey TestData
   , testId :: DBInt "id"
   , testName :: DBText "name"
+  , testDate :: DBDate "added"
   , testRef :: Maybe (DBForeignKey TestData "friend")
   }
   deriving Show
@@ -50,11 +51,12 @@ instance DBType TestData where
   fields _ = [ mkField testKey
              , mkField testId
              , mkField testName
+             , mkField testDate
              , mkField testRef
              ]
 
 instance FromRow TestData where
-  fromRow = TestData <$> field <*> field <*> field <*> field
+  fromRow = TestData <$> field <*> field <*> field <*> field <*> field
 
 data QueryComparator a where
   (:=:) :: (DBFieldType (a -> f), ToField v) => (a -> f) -> v -> QueryComparator a

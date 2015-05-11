@@ -7,9 +7,13 @@
              ScopedTypeVariables,
              FlexibleInstances #-}
 module DB.Types
-( DBKey(DBKey, dbKey)
-, DBInt(DBInt, dbInt)
+( DBInt(DBInt, dbInt)
 , DBText(DBText, dbText)
+, DBByteString(DBByteString, dbByteString)
+, DBDouble(DBDouble, dbDouble)
+, DBBool(DBBool, dbBool)
+, DBDate(DBDate, dbDate)
+, DBKey(DBKey, dbKey)
 , DBForeignKey(DBForeignKey, dbForeignKey)
 , DBFieldType
 , keyName, typeName, createStatement, constraints
@@ -18,8 +22,10 @@ module DB.Types
 )
 where
 
+import qualified Data.ByteString as B
 import Data.Int
 import Data.Text
+import Data.Time.Clock
 import Data.Typeable
 import Database.SQLite.Simple
 import Database.SQLite.Simple.FromField
@@ -46,19 +52,23 @@ class FromRow a => DBType a where
   name :: a -> Text
   fields :: a -> [DBField a]
 
-newtype DBType a => DBKey a = DBKey { dbKey :: Int }
-  deriving (Show, Eq)
 newtype DBInt (key :: Symbol) = DBInt { dbInt :: Int }
   deriving (Show, Eq)
 newtype DBText (key :: Symbol) = DBText { dbText :: Text }
   deriving (Show, Eq)
+newtype DBByteString (key :: Symbol) = DBByteString { dbByteString :: B.ByteString }
+  deriving (Show, Eq)
+newtype DBDouble (key :: Symbol) = DBDouble { dbDouble :: Double }
+  deriving (Show, Eq)
+newtype DBBool (key :: Symbol) = DBBool { dbBool :: Bool }
+  deriving (Show, Eq)
+newtype DBDate (key :: Symbol) = DBDate { dbDate :: UTCTime }
+  deriving (Show, Eq)
+newtype DBType a => DBKey a = DBKey { dbKey :: Int }
+  deriving (Show, Eq)
 newtype DBType a => DBForeignKey a (key :: Symbol) = DBForeignKey { dbForeignKey :: DBKey a }
   deriving (Show, Eq)
 
-instance FromField (DBKey a) where
-  fromField field = case (fromField field) :: Ok Int of
-    Ok x     -> Ok (DBKey x)
-    Errors e -> Errors e
 instance Typeable k => FromField (DBInt k) where
   fromField field = case (fromField field) :: Ok Int of
     Ok x     -> Ok (DBInt x)
@@ -67,19 +77,91 @@ instance Typeable k => FromField (DBText k) where
   fromField field = case (fromField field) :: Ok Text of
     Ok t     -> Ok (DBText t)
     Errors e -> Errors e
+instance Typeable k => FromField (DBByteString k) where
+  fromField field = case (fromField field) :: Ok B.ByteString of
+    Ok b     -> Ok (DBByteString b)
+    Errors e -> Errors e
+instance Typeable k => FromField (DBDouble k) where
+  fromField field = case (fromField field) :: Ok Double of
+    Ok d     -> Ok (DBDouble d)
+    Errors e -> Errors e
+instance Typeable k => FromField (DBBool k) where
+  fromField field = case (fromField field) :: Ok Int64 of
+    Ok 1     -> Ok (DBBool True)
+    Ok 0     -> Ok (DBBool False)
+    Ok _     -> returnError ConversionFailed field "Bools must be 0 or 1"
+    Errors e -> Errors e
+instance Typeable k => FromField (DBDate k) where
+  fromField field = case (fromField field) :: Ok UTCTime of
+    Ok t     -> Ok (DBDate t)
+    Errors e -> Errors e
+instance FromField (DBKey a) where
+  fromField field = case (fromField field) :: Ok Int of
+    Ok x     -> Ok (DBKey x)
+    Errors e -> Errors e
 instance (DBType a, Typeable k) => FromField (DBForeignKey a k) where
   fromField field = case (fromField field) :: Ok Int of
     Ok x     -> Ok (DBForeignKey $ DBKey x)
     Errors e -> Errors e
 
-instance ToField (DBKey a) where
-  toField (DBKey x) = toField x
 instance ToField (DBInt k) where
   toField (DBInt x) = toField x
 instance ToField (DBText k) where
   toField (DBText t) = toField t
+instance ToField (DBByteString k) where
+  toField (DBByteString b) = toField b
+instance ToField (DBDouble k) where
+  toField (DBDouble d) = toField d
+instance ToField (DBBool k) where
+  toField (DBBool b) = toField b
+instance ToField (DBDate k) where
+  toField (DBDate d) = toField d
+instance ToField (DBKey a) where
+  toField (DBKey x) = toField x
 instance DBType a => ToField (DBForeignKey a k) where
   toField (DBForeignKey (DBKey x)) = toField x
+
+instance KnownSymbol k => DBFieldType (a -> DBInt k) where
+  keyName _ = pack $ symbolVal (undefined :: DBInt k)
+  typeName _ = "INTEGER"
+instance KnownSymbol k => DBFieldType (a -> Maybe (DBInt k)) where
+  keyName _ = pack $ symbolVal (undefined :: DBInt k)
+  typeName _ = "INTEGER"
+
+instance KnownSymbol k => DBFieldType (a -> DBText k) where
+  keyName _ = pack $ symbolVal (undefined :: DBText k)
+  typeName _ = "TEXT"
+instance KnownSymbol k => DBFieldType (a -> Maybe (DBText k)) where
+  keyName _ = pack $ symbolVal (undefined :: DBText k)
+  typeName _ = "TEXT"
+
+instance KnownSymbol k => DBFieldType (a -> DBByteString k) where
+  keyName _ = pack $ symbolVal (undefined :: DBByteString k)
+  typeName _ = "BLOB"
+instance KnownSymbol k => DBFieldType (a -> Maybe (DBByteString k)) where
+  keyName _ = pack $ symbolVal (undefined :: DBByteString k)
+  typeName _ = "BLOB"
+
+instance KnownSymbol k => DBFieldType (a -> DBDouble k) where
+  keyName _ = pack $ symbolVal (undefined :: DBDouble k)
+  typeName _ = "REAL"
+instance KnownSymbol k => DBFieldType (a -> Maybe (DBDouble k)) where
+  keyName _ = pack $ symbolVal (undefined :: DBDouble k)
+  typeName _ = "REAL"
+
+instance KnownSymbol k => DBFieldType (a -> DBBool k) where
+  keyName _ = pack $ symbolVal (undefined :: DBBool k)
+  typeName _ = "INTEGER"
+instance KnownSymbol k => DBFieldType (a -> Maybe (DBBool k)) where
+  keyName _ = pack $ symbolVal (undefined :: DBBool k)
+  typeName _ = "INTEGER"
+
+instance KnownSymbol k => DBFieldType (a -> DBDate k) where
+  keyName _ = pack $ symbolVal (undefined :: DBDate k)
+  typeName _ = "TEXT"
+instance KnownSymbol k => DBFieldType (a -> Maybe (DBDate k)) where
+  keyName _ = pack $ symbolVal (undefined :: DBDate k)
+  typeName _ = "TEXT"
 
 instance DBFieldType (a -> DBKey a) where
   keyName _ = "rowid"
@@ -89,18 +171,7 @@ instance DBFieldType (a -> Maybe (DBKey a)) where
   keyName _ = "rowid"
   typeName _ = "INTEGER"
   createStatement x = Data.Text.concat [keyName x, " ", typeName x, " PRIMARY KEY"]
-instance KnownSymbol k => DBFieldType (a -> DBInt k) where
-  keyName _ = pack $ symbolVal (undefined :: DBInt k)
-  typeName _ = "INTEGER"
-instance KnownSymbol k => DBFieldType (a -> Maybe (DBInt k)) where
-  keyName _ = pack $ symbolVal (undefined :: DBInt k)
-  typeName _ = "INTEGER"
-instance KnownSymbol k => DBFieldType (a -> DBText k) where
-  keyName _ = pack $ symbolVal (undefined :: DBText k)
-  typeName _ = "TEXT"
-instance KnownSymbol k => DBFieldType (a -> Maybe (DBText k)) where
-  keyName _ = pack $ symbolVal (undefined :: DBText k)
-  typeName _ = "TEXT"
+
 instance forall a k b. (DBType b, KnownSymbol k) => DBFieldType (a -> DBForeignKey b k) where
   keyName _ = pack $ symbolVal (undefined :: DBForeignKey b k)
   typeName _ = "INTEGER"
