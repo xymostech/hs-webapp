@@ -15,6 +15,7 @@ import Text.Show.ByteString           (show)
 import Network.Wai.Handler.Warp       (run)
 
 import Api.Api                        (apiHandler)
+import DB.DB                          (dbSetup)
 import Handler                        (Handler, runHandler)
 import Static                         (staticHandler)
 import Util                           ( plainFileResponse
@@ -24,7 +25,9 @@ import Util                           ( plainFileResponse
 import qualified Logging
 
 main :: IO ()
-main = run 7000 app
+main = do
+  dbSetup
+  run 7000 app
 
 printStatusLine :: Request -> Response -> IO ()
 printStatusLine req resp =
