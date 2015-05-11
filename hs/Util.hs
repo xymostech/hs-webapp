@@ -3,18 +3,22 @@ module Util
 ( plainFileResponse
 , notFoundResponse
 , serverErrorResponse
+, textToLBS
 )
 where
 
 import Control.Monad.IO.Class   (liftIO)
-import Data.ByteString          (ByteString)
+import Data.Text                (Text)
+import Data.Text.Encoding       (encodeUtf8)
+import qualified Data.ByteString as BS (ByteString)
+import qualified Data.ByteString.Lazy as LBS
 import Network.HTTP.Types       (status200, status404, status500)
 import Network.Wai              (Response, Request, responseFile)
 import System.Directory         (doesFileExist)
 
 import Handler                  (Handler)
 
-plainFileResponse :: FilePath -> ByteString -> Handler Response
+plainFileResponse :: FilePath -> BS.ByteString -> Handler Response
 plainFileResponse path mimeType = do
   fileExists <- liftIO $ doesFileExist path
   if fileExists
@@ -28,3 +32,6 @@ notFoundResponse = do
 serverErrorResponse :: Handler Response
 serverErrorResponse = do
   return $ responseFile status500 [("Content-Type", "text/html")] "static/500.html" Nothing
+
+textToLBS :: Text -> LBS.ByteString
+textToLBS = LBS.fromStrict . encodeUtf8

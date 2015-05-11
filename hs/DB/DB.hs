@@ -7,19 +7,28 @@
              ScopedTypeVariables #-}
 module DB.DB
 ( dbSetup
-, queryTestData
 , TestData(TestData)
 , testId, testName
-, runQuery
+, query
 , QueryComparator((:=:))
+, DBInt(DBInt, dbInt), DBText(DBText, dbText)
 )
 where
 
 import Prelude                hiding (concat)
 import Control.Applicative    ((<$>), (<*>))
+import Control.Monad.IO.Class (liftIO)
 import Data.Text              (Text, intercalate, concat, append)
 import Data.String            (fromString)
-import Database.SQLite.Simple
+import Database.SQLite.Simple ( FromRow(fromRow)
+                              , NamedParam
+                              , Query(Query, fromQuery)
+                              , Connection, open, close
+                              , execute_
+                              , queryNamed
+                              , field
+                              , NamedParam((:=))
+                              )
 import Database.SQLite.Simple.ToField
 
 import Handler
@@ -27,7 +36,7 @@ import Handler
 import DB.Types
 
 data DBField a = forall f . DBFieldType f => MkField f
-class DBType a where
+class FromRow a => DBType a where
   mkField :: DBFieldType (a -> f) => (a -> f) -> DBField a
   mkField = MkField
 
@@ -63,16 +72,20 @@ selectorFromComparator (k :=: _) = concat [n, "=@", n]
 makeQuery :: Text -> Query
 makeQuery text = Query { fromQuery = text }
 
-makeConn :: IO Connection
-makeConn = open "datastore.sqlite"
+query :: DBType a => [QueryComparator a] -> Handler [a]
+query comparators = do
+  conn <- asks dbConnection
+  liftIO $ query' comparators conn
 
-runQuery :: DBType a => [QueryComparator a] -> Connection -> IO [TestData]
-runQuery comparators conn = do
+query' :: forall a. DBType a => [QueryComparator a] -> Connection -> IO [a]
+query' comparators conn = do
   queryNamed conn query namedParams
   where
     namedParams = map paramFromComparator comparators
     query = makeQuery $ concat
-      [ "SELECT * FROM TestData WHERE "
+      [ "SELECT * FROM "
+      , dbName (undefined :: a)
+      , " WHERE "
       , intercalate " AND " $ map selectorFromComparator comparators
       ]
 

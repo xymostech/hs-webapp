@@ -5,7 +5,7 @@
              ScopedTypeVariables,
              FlexibleInstances #-}
 module DB.Types
-( DBInt, DBText
+( DBInt(DBInt, dbInt), DBText(DBText, dbText)
 , DBFieldType
 , keyName, typeName
 )
@@ -19,9 +19,9 @@ import Database.SQLite.Simple.FromField
 import Database.SQLite.Simple.Ok
 import GHC.TypeLits
 
-newtype DBInt (key :: Symbol) = DBInt Int
+newtype DBInt (key :: Symbol) = DBInt { dbInt :: Int }
   deriving Show
-newtype DBText (key :: Symbol) = DBText Text
+newtype DBText (key :: Symbol) = DBText { dbText :: Text }
   deriving Show
 
 instance Typeable k => FromField (DBInt k) where
