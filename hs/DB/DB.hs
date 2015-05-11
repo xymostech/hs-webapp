@@ -7,10 +7,13 @@
 module DB.DB
 ( dbSetup
 , TestData(TestData)
-, testId, testName
+, testId, testName, testKey, testRef
 , query, query'
 , QueryComparator((:=:))
-, DBInt(DBInt, dbInt), DBText(DBText, dbText)
+, DBKey(DBKey, dbKey)
+, DBInt(DBInt, dbInt)
+, DBText(DBText, dbText)
+, DBForeignKey(DBForeignKey, dbForeignKey)
 )
 where
 
@@ -34,7 +37,7 @@ import Handler
 import DB.Types
 
 data TestData = TestData
-  { testKey :: DBKey
+  { testKey :: DBKey TestData
   , testId :: DBInt "id"
   , testName :: DBText "name"
   , testRef :: Maybe (DBForeignKey TestData "friend")

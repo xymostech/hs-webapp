@@ -14,7 +14,7 @@ module DB.Types
 , DBFieldType
 , keyName, typeName, createStatement, constraints
 , DBField(MkField)
-, DBType, mkField, key, name, fields
+, DBType(mkField, key, name, fields)
 )
 where
 
@@ -41,20 +41,20 @@ class FromRow a => DBType a where
   mkField :: DBFieldType (a -> f) => (a -> f) -> DBField a
   mkField = MkField
 
-  key :: a -> DBKey
+  key :: a -> DBKey a
   name :: a -> Text
   fields :: a -> [DBField a]
 
-newtype DBKey = DBKey { dbKey :: Int }
-  deriving Show
+newtype DBType a => DBKey a = DBKey { dbKey :: Int }
+  deriving (Show, Eq)
 newtype DBInt (key :: Symbol) = DBInt { dbInt :: Int }
-  deriving Show
+  deriving (Show, Eq)
 newtype DBText (key :: Symbol) = DBText { dbText :: Text }
-  deriving Show
-newtype DBType a => DBForeignKey a (key :: Symbol) = DBForeignKey { dbForeignKey :: Int }
-  deriving Show
+  deriving (Show, Eq)
+newtype DBType a => DBForeignKey a (key :: Symbol) = DBForeignKey { dbForeignKey :: DBKey a }
+  deriving (Show, Eq)
 
-instance FromField DBKey where
+instance FromField (DBKey a) where
   fromField field = case (fromField field) :: Ok Int of
     Ok x     -> Ok (DBKey x)
     Errors e -> Errors e
@@ -66,12 +66,16 @@ instance Typeable k => FromField (DBText k) where
   fromField field = case (fromField field) :: Ok Text of
     Ok t     -> Ok (DBText t)
     Errors e -> Errors e
-instance Typeable k => FromField (DBForeignKey k a) where
+instance (DBType a, Typeable k) => FromField (DBForeignKey a k) where
   fromField field = case (fromField field) :: Ok Int of
-    Ok x     -> Ok (DBForeignKey x)
+    Ok x     -> Ok (DBForeignKey $ DBKey x)
     Errors e -> Errors e
 
-instance DBFieldType (a -> DBKey) where
+instance DBFieldType (a -> DBKey a) where
+  keyName _ = "rowid"
+  typeName _ = "INTEGER"
+  createStatement x = Data.Text.concat [keyName x, " ", typeName x, " PRIMARY KEY"]
+instance DBFieldType (a -> Maybe (DBKey a)) where
   keyName _ = "rowid"
   typeName _ = "INTEGER"
   createStatement x = Data.Text.concat [keyName x, " ", typeName x, " PRIMARY KEY"]
