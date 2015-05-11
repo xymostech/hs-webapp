@@ -23,6 +23,7 @@ import Data.Text
 import Data.Typeable
 import Database.SQLite.Simple
 import Database.SQLite.Simple.FromField
+import Database.SQLite.Simple.ToField
 import Database.SQLite.Simple.Ok
 import GHC.TypeLits
 
@@ -70,6 +71,15 @@ instance (DBType a, Typeable k) => FromField (DBForeignKey a k) where
   fromField field = case (fromField field) :: Ok Int of
     Ok x     -> Ok (DBForeignKey $ DBKey x)
     Errors e -> Errors e
+
+instance ToField (DBKey a) where
+  toField (DBKey x) = toField x
+instance ToField (DBInt k) where
+  toField (DBInt x) = toField x
+instance ToField (DBText k) where
+  toField (DBText t) = toField t
+instance DBType a => ToField (DBForeignKey a k) where
+  toField (DBForeignKey (DBKey x)) = toField x
 
 instance DBFieldType (a -> DBKey a) where
   keyName _ = "rowid"
