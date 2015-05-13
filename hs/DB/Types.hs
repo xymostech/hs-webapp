@@ -145,45 +145,33 @@ instance ToField (DBKey a) where
 instance DBType a => ToField (DBForeignKey a k) where
   toField (DBForeignKey (DBKey x)) = toField x
 
+instance DBFieldType a f => DBFieldType a (Maybe f) where
+  keyName _ = keyName (undefined :: (a -> f))
+  typeName _ = typeName (undefined :: (a -> f))
+  createStatement _ = createStatement (undefined :: (a -> f))
+  constraints _ = constraints (undefined :: (a -> f))
+
 instance (DBType a, KnownSymbol k) => DBFieldType a (DBInt k) where
-  keyName _ = pack $ symbolVal (undefined :: DBInt k)
-  typeName _ = "INTEGER"
-instance (DBType a, KnownSymbol k) => DBFieldType a (Maybe (DBInt k)) where
   keyName _ = pack $ symbolVal (undefined :: DBInt k)
   typeName _ = "INTEGER"
 
 instance (DBType a, KnownSymbol k) => DBFieldType a (DBText k) where
   keyName _ = pack $ symbolVal (undefined :: DBText k)
   typeName _ = "TEXT"
-instance (DBType a, KnownSymbol k) => DBFieldType a (Maybe (DBText k)) where
-  keyName _ = pack $ symbolVal (undefined :: DBText k)
-  typeName _ = "TEXT"
 
 instance (DBType a, KnownSymbol k) => DBFieldType a (DBByteString k) where
-  keyName _ = pack $ symbolVal (undefined :: DBByteString k)
-  typeName _ = "BLOB"
-instance (DBType a, KnownSymbol k) => DBFieldType a (Maybe (DBByteString k)) where
   keyName _ = pack $ symbolVal (undefined :: DBByteString k)
   typeName _ = "BLOB"
 
 instance (DBType a, KnownSymbol k) => DBFieldType a (DBDouble k) where
   keyName _ = pack $ symbolVal (undefined :: DBDouble k)
   typeName _ = "REAL"
-instance (DBType a, KnownSymbol k) => DBFieldType a (Maybe (DBDouble k)) where
-  keyName _ = pack $ symbolVal (undefined :: DBDouble k)
-  typeName _ = "REAL"
 
 instance (DBType a, KnownSymbol k) => DBFieldType a (DBBool k) where
   keyName _ = pack $ symbolVal (undefined :: DBBool k)
   typeName _ = "INTEGER"
-instance (DBType a, KnownSymbol k) => DBFieldType a (Maybe (DBBool k)) where
-  keyName _ = pack $ symbolVal (undefined :: DBBool k)
-  typeName _ = "INTEGER"
 
 instance (DBType a, KnownSymbol k) => DBFieldType a (DBDate k) where
-  keyName _ = pack $ symbolVal (undefined :: DBDate k)
-  typeName _ = "TEXT"
-instance (DBType a, KnownSymbol k) => DBFieldType a (Maybe (DBDate k)) where
   keyName _ = pack $ symbolVal (undefined :: DBDate k)
   typeName _ = "TEXT"
 
@@ -191,23 +179,8 @@ instance DBType a => DBFieldType a (DBKey a) where
   keyName _ = "rowid"
   typeName _ = "INTEGER"
   createStatement x = Data.Text.concat [keyName x, " ", typeName x, " PRIMARY KEY"]
-instance DBType a => DBFieldType a (Maybe (DBKey a)) where
-  keyName _ = "rowid"
-  typeName _ = "INTEGER"
-  createStatement x = Data.Text.concat [keyName x, " ", typeName x, " PRIMARY KEY"]
 
 instance forall a k b. (DBType a, DBType b, KnownSymbol k) => DBFieldType a (DBForeignKey b k) where
-  keyName _ = pack $ symbolVal (undefined :: DBForeignKey b k)
-  typeName _ = "INTEGER"
-  constraints x =
-    [ Data.Text.concat [ "FOREIGN KEY("
-                       , keyName x
-                       , ") REFERENCES "
-                       , name (undefined :: b)
-                       , "(rowid)"
-                       ]
-    ]
-instance forall a k b. (DBType a, DBType b, KnownSymbol k) => DBFieldType a (Maybe (DBForeignKey b k)) where
   keyName _ = pack $ symbolVal (undefined :: DBForeignKey b k)
   typeName _ = "INTEGER"
   constraints x =
