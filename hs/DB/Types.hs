@@ -48,7 +48,7 @@ class FromRow a => DBType a where
   mkField :: DBFieldType (a -> f) => (a -> f) -> DBField a
   mkField = MkField
 
-  key :: a -> DBKey a
+  key :: a -> Maybe (DBKey a)
   name :: a -> Text
   fields :: a -> [DBField a]
 

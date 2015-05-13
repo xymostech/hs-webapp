@@ -11,6 +11,7 @@ import Network.HTTP.Types (status200)
 import Network.Wai        (Response, Request, responseLBS)
 
 import DB.DB
+import TestData
 import Handler            (Handler)
 import Util               (textToLBS)
 

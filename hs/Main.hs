@@ -22,11 +22,14 @@ import Util                           ( plainFileResponse
                                       , notFoundResponse
                                       , serverErrorResponse
                                       )
+import TestData                       (TestData)
 import qualified Logging
 
 main :: IO ()
 main = do
-  dbSetup
+  dbSetup $ \setupTable -> do
+    setupTable :: IO TestData
+    return ()
   run 7000 app
 
 printStatusLine :: Request -> Response -> IO ()

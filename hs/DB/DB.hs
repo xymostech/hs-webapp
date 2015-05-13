@@ -6,14 +6,19 @@
              ScopedTypeVariables #-}
 module DB.DB
 ( dbSetup
-, TestData(TestData)
-, testId, testName, testKey, testRef
 , query, query'
 , QueryComparator((:=:), (:/=:), (:<:), (:<=:), (:>:), (:>=:))
-, DBKey(DBKey, dbKey)
+, DBType(mkField, key, name, fields)
 , DBInt(DBInt, dbInt)
 , DBText(DBText, dbText)
+, DBByteString(DBByteString, dbByteString)
+, DBDouble(DBDouble, dbDouble)
+, DBBool(DBBool, dbBool)
+, DBDate(DBDate, dbDate)
+, DBKey(DBKey, dbKey)
 , DBForeignKey(DBForeignKey, dbForeignKey)
+, FromRow(fromRow), field
+, ToRow(toRow), toField
 )
 where
 
@@ -22,6 +27,7 @@ import Control.Monad.IO.Class (liftIO)
 import Data.Text as T         (Text, intercalate, concat, append)
 import Data.String            (fromString)
 import Database.SQLite.Simple ( FromRow(fromRow)
+                              , ToRow(toRow)
                               , NamedParam
                               , Query(Query, fromQuery)
                               , Connection, open, close
@@ -35,28 +41,6 @@ import Database.SQLite.Simple.ToField
 import Handler
 
 import DB.Types
-
-data TestData = TestData
-  { testKey :: DBKey TestData
-  , testId :: DBInt "id"
-  , testName :: DBText "name"
-  , testDate :: DBDate "added"
-  , testRef :: Maybe (DBForeignKey TestData "friend")
-  }
-  deriving Show
-
-instance DBType TestData where
-  key = testKey
-  name _ = "TestData"
-  fields _ = [ mkField testKey
-             , mkField testId
-             , mkField testName
-             , mkField testDate
-             , mkField testRef
-             ]
-
-instance FromRow TestData where
-  fromRow = TestData <$> field <*> field <*> field <*> field <*> field
 
 data QueryComparator a where
   (:=:) :: (DBFieldType (a -> f), ToField v) => (a -> f) -> v -> QueryComparator a
@@ -119,8 +103,8 @@ setupTable conn = do
       , ")"
       ]
 
-dbSetup :: IO ()
-dbSetup = do
+dbSetup :: DBType a => (IO a -> IO ()) -> IO ()
+dbSetup func = do
   conn <- open "datastore.sqlite"
-  setupTable conn :: IO TestData
+  func (setupTable conn)
   close conn
