@@ -35,6 +35,7 @@ makeTestData key name friend = do
 
 instance DBType TestData where
   key = testKey
+  setKey testData newKey = testData { testKey = newKey }
   name _ = "TestData"
   fields _ = [ mkField testKey
              , mkField testId

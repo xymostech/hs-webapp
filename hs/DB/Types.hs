@@ -20,7 +20,7 @@ module DB.Types
 , DBFieldType
 , keyName, typeName, createStatement, constraints
 , DBField(MkField)
-, DBType(mkField, key, name, fields)
+, DBType(mkField, setKey, key, name, fields, namedParams, selectors)
 , ToRowDBType(ToRowDBType)
 )
 where
@@ -49,14 +49,27 @@ class (DBType a, ToField f) => DBFieldType a f where
   sqlData :: a -> (a -> f) -> SQLData
   sqlData dat func = toField $ func dat
 
+  namedParam :: a -> (a -> f) -> NamedParam
+  namedParam dat func = (Data.Text.append "@" $ keyName func) := (func dat)
+
+  selector :: (a -> f) -> Text
+  selector func = Data.Text.concat [keyName func, "=@", keyName func]
+
 data DBField a = forall f . DBFieldType a f => MkField (a -> f)
 class FromRow a => DBType a where
   mkField :: DBFieldType a f => (a -> f) -> DBField a
   mkField = MkField
 
   key :: a -> Maybe (DBKey a)
+  setKey :: a -> Maybe (DBKey a) -> a
   name :: a -> Text
   fields :: a -> [DBField a]
+
+  namedParams :: a -> [NamedParam]
+  namedParams dat = Prelude.map (\(MkField f) -> namedParam dat f) $ fields dat
+
+  selectors :: a -> [Text]
+  selectors dat = Prelude.map (\(MkField f) -> selector f) $ fields dat
 
 newtype ToRowDBType a = ToRowDBType a
 

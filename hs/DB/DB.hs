@@ -7,8 +7,9 @@
 module DB.DB
 ( dbSetup
 , query, query'
+, put, put'
 , QueryComparator((:=:), (:/=:), (:<:), (:<=:), (:>:), (:>=:))
-, DBType(mkField, key, name, fields)
+, DBType(mkField, key, setKey, name, fields)
 , DBInt(DBInt, dbInt)
 , DBText(DBText, dbText)
 , DBByteString(DBByteString, dbByteString)
@@ -18,7 +19,6 @@ module DB.DB
 , DBKey(DBKey, dbKey)
 , DBForeignKey(DBForeignKey, dbForeignKey)
 , FromRow(fromRow), field
-, ToRow(toRow), toField
 )
 where
 
@@ -27,12 +27,12 @@ import Control.Monad.IO.Class (liftIO)
 import Data.Text as T         (Text, intercalate, concat, append)
 import Data.String            (fromString)
 import Database.SQLite.Simple ( FromRow(fromRow)
-                              , ToRow(toRow)
                               , NamedParam
                               , Query(Query, fromQuery)
                               , Connection, open, close
-                              , execute_
+                              , execute, executeNamed, execute_
                               , queryNamed
+                              , lastInsertRowId
                               , field
                               , NamedParam((:=))
                               )
@@ -85,6 +85,44 @@ query' comparators conn = do
       , if null comparators then "" else " WHERE "
       , intercalate " AND " $ map selectorFromComparator comparators
       ]
+
+insert' :: forall a. DBType a => a -> Connection -> IO a
+insert' insertData conn = do
+  execute conn query (ToRowDBType insertData)
+  rowId <- lastInsertRowId conn
+  return $ setKey insertData $ Just (DBKey $ fromIntegral rowId)
+  where
+    query = makeQuery $ T.concat
+      [ "INSERT INTO "
+      , name (undefined :: a)
+      , " VALUES ("
+      , intercalate ", " $ map (\_ -> "?") $ fields (undefined :: a)
+      , ")"
+      ]
+
+update' :: forall a. DBType a => a -> Connection -> IO ()
+update' updateData conn = do
+  executeNamed conn query $ namedParams updateData
+  where
+    query = makeQuery $ T.concat
+      [ "UPDATE "
+      , name (undefined :: a)
+      , " SET "
+      , intercalate ", " $ selectors (undefined :: a)
+      , " WHERE rowid=@rowid"
+      ]
+
+put :: DBType a => a -> Handler a
+put putData = do
+  conn <- asks dbConnection
+  liftIO $ put' putData conn
+
+put' :: forall a. DBType a => a -> Connection -> IO a
+put' putData conn = case key putData of
+  Just k -> do
+    update' putData conn
+    return putData
+  Nothing -> insert' putData conn
 
 setupTable :: forall a. DBType a => Connection -> IO a
 setupTable conn = do
