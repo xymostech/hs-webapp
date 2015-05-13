@@ -1,7 +1,9 @@
 {-# LANGUAGE OverloadedStrings,
              DataKinds,
+             MultiParamTypeClasses,
              KindSignatures,
              ExistentialQuantification,
+             TypeFamilies,
              FlexibleContexts,
              DeriveDataTypeable,
              ScopedTypeVariables,
@@ -19,6 +21,7 @@ module DB.Types
 , keyName, typeName, createStatement, constraints
 , DBField(MkField)
 , DBType(mkField, key, name, fields)
+, ToRowDBType(ToRowDBType)
 )
 where
 
@@ -33,24 +36,32 @@ import Database.SQLite.Simple.ToField
 import Database.SQLite.Simple.Ok
 import GHC.TypeLits
 
-class DBFieldType a where
-  keyName :: a -> Text
-  typeName :: a -> Text
+class (DBType a, ToField f) => DBFieldType a f where
+  keyName :: (a -> f) -> Text
+  typeName :: (a -> f) -> Text
 
-  createStatement :: a -> Text
-  createStatement x = Data.Text.concat [keyName x, " ", typeName x]
+  createStatement :: (a -> f) -> Text
+  createStatement func = Data.Text.concat [keyName func, " ", typeName func]
 
-  constraints :: a -> [Text]
+  constraints :: (a -> f) -> [Text]
   constraints _ = []
 
-data DBField a = forall f . DBFieldType f => MkField f
+  sqlData :: a -> (a -> f) -> SQLData
+  sqlData dat func = toField $ func dat
+
+data DBField a = forall f . DBFieldType a f => MkField (a -> f)
 class FromRow a => DBType a where
-  mkField :: DBFieldType (a -> f) => (a -> f) -> DBField a
+  mkField :: DBFieldType a f => (a -> f) -> DBField a
   mkField = MkField
 
   key :: a -> Maybe (DBKey a)
   name :: a -> Text
   fields :: a -> [DBField a]
+
+newtype ToRowDBType a = ToRowDBType a
+
+instance DBType a => ToRow (ToRowDBType a) where
+  toRow (ToRowDBType dat) = Prelude.map (\(MkField f) -> sqlData dat f) $ fields dat
 
 newtype DBInt (key :: Symbol) = DBInt { dbInt :: Int }
   deriving (Show, Eq)
@@ -121,58 +132,58 @@ instance ToField (DBKey a) where
 instance DBType a => ToField (DBForeignKey a k) where
   toField (DBForeignKey (DBKey x)) = toField x
 
-instance KnownSymbol k => DBFieldType (a -> DBInt k) where
+instance (DBType a, KnownSymbol k) => DBFieldType a (DBInt k) where
   keyName _ = pack $ symbolVal (undefined :: DBInt k)
   typeName _ = "INTEGER"
-instance KnownSymbol k => DBFieldType (a -> Maybe (DBInt k)) where
+instance (DBType a, KnownSymbol k) => DBFieldType a (Maybe (DBInt k)) where
   keyName _ = pack $ symbolVal (undefined :: DBInt k)
   typeName _ = "INTEGER"
 
-instance KnownSymbol k => DBFieldType (a -> DBText k) where
+instance (DBType a, KnownSymbol k) => DBFieldType a (DBText k) where
   keyName _ = pack $ symbolVal (undefined :: DBText k)
   typeName _ = "TEXT"
-instance KnownSymbol k => DBFieldType (a -> Maybe (DBText k)) where
+instance (DBType a, KnownSymbol k) => DBFieldType a (Maybe (DBText k)) where
   keyName _ = pack $ symbolVal (undefined :: DBText k)
   typeName _ = "TEXT"
 
-instance KnownSymbol k => DBFieldType (a -> DBByteString k) where
+instance (DBType a, KnownSymbol k) => DBFieldType a (DBByteString k) where
   keyName _ = pack $ symbolVal (undefined :: DBByteString k)
   typeName _ = "BLOB"
-instance KnownSymbol k => DBFieldType (a -> Maybe (DBByteString k)) where
+instance (DBType a, KnownSymbol k) => DBFieldType a (Maybe (DBByteString k)) where
   keyName _ = pack $ symbolVal (undefined :: DBByteString k)
   typeName _ = "BLOB"
 
-instance KnownSymbol k => DBFieldType (a -> DBDouble k) where
+instance (DBType a, KnownSymbol k) => DBFieldType a (DBDouble k) where
   keyName _ = pack $ symbolVal (undefined :: DBDouble k)
   typeName _ = "REAL"
-instance KnownSymbol k => DBFieldType (a -> Maybe (DBDouble k)) where
+instance (DBType a, KnownSymbol k) => DBFieldType a (Maybe (DBDouble k)) where
   keyName _ = pack $ symbolVal (undefined :: DBDouble k)
   typeName _ = "REAL"
 
-instance KnownSymbol k => DBFieldType (a -> DBBool k) where
+instance (DBType a, KnownSymbol k) => DBFieldType a (DBBool k) where
   keyName _ = pack $ symbolVal (undefined :: DBBool k)
   typeName _ = "INTEGER"
-instance KnownSymbol k => DBFieldType (a -> Maybe (DBBool k)) where
+instance (DBType a, KnownSymbol k) => DBFieldType a (Maybe (DBBool k)) where
   keyName _ = pack $ symbolVal (undefined :: DBBool k)
   typeName _ = "INTEGER"
 
-instance KnownSymbol k => DBFieldType (a -> DBDate k) where
+instance (DBType a, KnownSymbol k) => DBFieldType a (DBDate k) where
   keyName _ = pack $ symbolVal (undefined :: DBDate k)
   typeName _ = "TEXT"
-instance KnownSymbol k => DBFieldType (a -> Maybe (DBDate k)) where
+instance (DBType a, KnownSymbol k) => DBFieldType a (Maybe (DBDate k)) where
   keyName _ = pack $ symbolVal (undefined :: DBDate k)
   typeName _ = "TEXT"
 
-instance DBFieldType (a -> DBKey a) where
+instance DBType a => DBFieldType a (DBKey a) where
   keyName _ = "rowid"
   typeName _ = "INTEGER"
   createStatement x = Data.Text.concat [keyName x, " ", typeName x, " PRIMARY KEY"]
-instance DBFieldType (a -> Maybe (DBKey a)) where
+instance DBType a => DBFieldType a (Maybe (DBKey a)) where
   keyName _ = "rowid"
   typeName _ = "INTEGER"
   createStatement x = Data.Text.concat [keyName x, " ", typeName x, " PRIMARY KEY"]
 
-instance forall a k b. (DBType b, KnownSymbol k) => DBFieldType (a -> DBForeignKey b k) where
+instance forall a k b. (DBType a, DBType b, KnownSymbol k) => DBFieldType a (DBForeignKey b k) where
   keyName _ = pack $ symbolVal (undefined :: DBForeignKey b k)
   typeName _ = "INTEGER"
   constraints x =
@@ -183,7 +194,7 @@ instance forall a k b. (DBType b, KnownSymbol k) => DBFieldType (a -> DBForeignK
                        , "(rowid)"
                        ]
     ]
-instance forall a k b. (DBType b, KnownSymbol k) => DBFieldType (a -> Maybe (DBForeignKey b k)) where
+instance forall a k b. (DBType a, DBType b, KnownSymbol k) => DBFieldType a (Maybe (DBForeignKey b k)) where
   keyName _ = pack $ symbolVal (undefined :: DBForeignKey b k)
   typeName _ = "INTEGER"
   constraints x =
