@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 import Control.Exception.Lifted       (handle)
-import Control.Exception              (SomeException)
+import Control.Exception              (SomeException, displayException)
 import Control.Monad.IO.Class         (liftIO)
 import Data.ByteString.Lazy           (toStrict)
 import qualified Data.ByteString as B (intercalate, concat)
@@ -62,6 +62,7 @@ chooseHandler req debug = case (path, debug) of
 
 handleError :: SomeException -> Request -> Handler Response
 handleError ex req = do
+  liftIO $ print $ displayException ex
   resp <- serverErrorResponse
   liftIO $ printStatusLine req resp
   return resp

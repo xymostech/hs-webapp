@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings,
              DataKinds #-}
 module TestData
-( TestData(testKey, testId, testName, testDate, testRef)
+( TestData(testKey, testId, testCount)
 , makeTestData
 )
 where
@@ -14,24 +14,12 @@ import DB.DB
 data TestData = TestData
   { testKey :: Maybe (DBKey TestData)
   , testId :: DBInt "id"
-  , testName :: DBText "name"
-  , testDate :: DBDate "added"
-  , testRef :: Maybe (DBForeignKey TestData "friend")
+  , testCount :: DBInt "count"
   }
   deriving Show
 
-makeTestData :: Int -> Text -> Maybe (DBKey TestData) -> IO TestData
-makeTestData key name friend = do
-  time <- getCurrentTime
-  return $ TestData
-    { testKey = Nothing
-    , testId = DBInt key
-    , testName = DBText name
-    , testDate = DBDate time
-    , testRef = case friend of
-        Nothing -> Nothing
-        Just k -> Just $ DBForeignKey k
-    }
+makeTestData :: Int -> TestData
+makeTestData id = TestData Nothing (DBInt id) (DBInt 0)
 
 instance DBType TestData where
   key = testKey
@@ -39,21 +27,15 @@ instance DBType TestData where
   name _ = "TestData"
   fields _ = [ mkField testKey
              , mkField testId
-             , mkField testName
-             , mkField testDate
-             , mkField testRef
+             , mkField testCount
              ]
 
 instance FromRow TestData where
   fromRow = do
     key <- field
     id <- field
-    name <- field
-    date <- field
-    ref <- field
+    count <- field
     return $ TestData { testKey = key
                       , testId = id
-                      , testName = name
-                      , testDate = date
-                      , testRef = ref
+                      , testCount = count
                       }

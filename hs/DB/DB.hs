@@ -16,7 +16,7 @@ module DB.DB
 , DBDouble(DBDouble, dbDouble)
 , DBBool(DBBool, dbBool)
 , DBDate(DBDate, dbDate)
-, DBKey(DBKey, dbKey)
+, DBKey(dbKey)
 , DBForeignKey(DBForeignKey, dbForeignKey)
 , FromRow(fromRow), field
 )
