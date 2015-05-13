@@ -21,5 +21,5 @@ pingHandler _ =
 
 dbTestHandler :: Request -> Handler Response
 dbTestHandler _ = do
-  [a] <- query [testId :=: (1 :: Int)]
+  (a:_) <- query [testId :=: DBInt 3]
   return $ responseLBS status200 [] $ textToLBS $ dbText $ testName a

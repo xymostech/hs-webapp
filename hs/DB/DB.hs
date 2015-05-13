@@ -43,12 +43,12 @@ import Handler
 import DB.Types
 
 data QueryComparator a where
-  (:=:) :: (DBFieldType a f, ToField v) => (a -> f) -> v -> QueryComparator a
-  (:/=:) :: (DBFieldType a f, ToField v) => (a -> f) -> v -> QueryComparator a
-  (:<:) :: (DBFieldType a f, ToField v) => (a -> f) -> v -> QueryComparator a
-  (:<=:) :: (DBFieldType a f, ToField v) => (a -> f) -> v -> QueryComparator a
-  (:>:) :: (DBFieldType a f, ToField v) => (a -> f) -> v -> QueryComparator a
-  (:>=:) :: (DBFieldType a f, ToField v) => (a -> f) -> v -> QueryComparator a
+  (:=:) :: DBFieldType a f => (a -> f) -> f -> QueryComparator a
+  (:/=:) :: DBFieldType a f => (a -> f) -> f -> QueryComparator a
+  (:<:) :: DBFieldType a f => (a -> f) -> f -> QueryComparator a
+  (:<=:) :: DBFieldType a f => (a -> f) -> f -> QueryComparator a
+  (:>:) :: DBFieldType a f => (a -> f) -> f -> QueryComparator a
+  (:>=:) :: DBFieldType a f => (a -> f) -> f -> QueryComparator a
 
 paramFromComparator :: QueryComparator a -> NamedParam
 paramFromComparator (k :=: v) = (append "@" $ keyName k) := v
