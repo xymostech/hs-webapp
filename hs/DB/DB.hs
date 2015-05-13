@@ -9,7 +9,7 @@ module DB.DB
 , TestData(TestData)
 , testId, testName, testKey, testRef
 , query, query'
-, QueryComparator((:=:))
+, QueryComparator((:=:), (:/=:), (:<:), (:<=:), (:>:), (:>=:))
 , DBKey(DBKey, dbKey)
 , DBInt(DBInt, dbInt)
 , DBText(DBText, dbText)
@@ -60,14 +60,27 @@ instance FromRow TestData where
 
 data QueryComparator a where
   (:=:) :: (DBFieldType (a -> f), ToField v) => (a -> f) -> v -> QueryComparator a
+  (:/=:) :: (DBFieldType (a -> f), ToField v) => (a -> f) -> v -> QueryComparator a
+  (:<:) :: (DBFieldType (a -> f), ToField v) => (a -> f) -> v -> QueryComparator a
+  (:<=:) :: (DBFieldType (a -> f), ToField v) => (a -> f) -> v -> QueryComparator a
+  (:>:) :: (DBFieldType (a -> f), ToField v) => (a -> f) -> v -> QueryComparator a
+  (:>=:) :: (DBFieldType (a -> f), ToField v) => (a -> f) -> v -> QueryComparator a
 
 paramFromComparator :: QueryComparator a -> NamedParam
 paramFromComparator (k :=: v) = (append "@" $ keyName k) := v
+paramFromComparator (k :/=: v) = (append "@" $ keyName k) := v
+paramFromComparator (k :<: v) = (append "@" $ keyName k) := v
+paramFromComparator (k :<=: v) = (append "@" $ keyName k) := v
+paramFromComparator (k :>: v) = (append "@" $ keyName k) := v
+paramFromComparator (k :>=: v) = (append "@" $ keyName k) := v
 
 selectorFromComparator :: QueryComparator a -> Text
-selectorFromComparator (k :=: _) = T.concat [n, "=@", n]
-  where
-    n = keyName k
+selectorFromComparator (k :=: _) = T.concat [n, "=@", n] where n = keyName k
+selectorFromComparator (k :/=: _) = T.concat [n, "!=@", n] where n = keyName k
+selectorFromComparator (k :<: _) = T.concat [n, "<@", n] where n = keyName k
+selectorFromComparator (k :<=: _) = T.concat [n, "<=@", n] where n = keyName k
+selectorFromComparator (k :>: _) = T.concat [n, ">@", n] where n = keyName k
+selectorFromComparator (k :>=: _) = T.concat [n, ">=@", n] where n = keyName k
 
 makeQuery :: Text -> Query
 makeQuery text = Query { fromQuery = text }
