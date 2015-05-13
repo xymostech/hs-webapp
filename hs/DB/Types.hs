@@ -1,13 +1,10 @@
-{-# LANGUAGE OverloadedStrings,
-             DataKinds,
-             MultiParamTypeClasses,
-             KindSignatures,
+{-# LANGUAGE DataKinds,
              ExistentialQuantification,
-             TypeFamilies,
-             FlexibleContexts,
-             DeriveDataTypeable,
-             ScopedTypeVariables,
-             FlexibleInstances #-}
+             FlexibleInstances,
+             KindSignatures,
+             MultiParamTypeClasses,
+             OverloadedStrings,
+             ScopedTypeVariables #-}
 module DB.Types
 ( DBInt(DBInt, dbInt)
 , DBText(DBText, dbText)

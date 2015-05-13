@@ -1,8 +1,5 @@
-{-# LANGUAGE OverloadedStrings,
-             DataKinds,
-             TypeFamilies,
-             FlexibleContexts,
-             GADTs,
+{-# LANGUAGE GADTs,
+             OverloadedStrings,
              ScopedTypeVariables #-}
 module DB.DB
 ( dbSetup
