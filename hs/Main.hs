@@ -6,6 +6,7 @@ import Data.ByteString.Lazy           (toStrict)
 import qualified Data.ByteString as B (intercalate, concat)
 import qualified Data.ByteString.Char8 as C (putStrLn)
 import Network.HTTP.Types             (statusCode)
+import Network.HTTP.Types.Method      (methodGet)
 import Network.Wai                    ( Application, Response, Request
                                       , rawPathInfo, rawQueryString
                                       , pathInfo, requestMethod, responseStatus
@@ -51,13 +52,14 @@ app req sendResponse =
     sendResponse resp
 
 chooseHandler :: Request -> Bool -> (Request -> Handler Response)
-chooseHandler req debug = case (path, debug) of
-  ("static":_, _) -> staticHandler
-  ("build":_, _) -> staticHandler
-  ("api":_, _) -> apiHandler
-  (_, False) -> \x -> plainFileResponse "static/index.html" "text/html"
-  (_, True) -> \x -> plainFileResponse "static/index-debug.html" "text/html"
+chooseHandler req debug = case (method, path, debug) of
+  (methodGet, "static":_, _) -> staticHandler
+  (methodGet, "build":_, _) -> staticHandler
+  (_, "api":_, _) -> apiHandler
+  (methodGet, _, False) -> \x -> plainFileResponse "static/index.html" "text/html"
+  (methodGet, _, True) -> \x -> plainFileResponse "static/index-debug.html" "text/html"
   where
+    method = requestMethod req
     path = pathInfo req
 
 handleError :: SomeException -> Request -> Handler Response
