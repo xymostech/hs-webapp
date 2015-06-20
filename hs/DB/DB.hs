@@ -5,6 +5,7 @@ module DB.DB
 ( dbSetup
 , query, query'
 , put, put'
+, delete, delete'
 , QueryComparator((:=:), (:/=:), (:<:), (:<=:), (:>:), (:>=:))
 , DBType(mkField, key, setKey, name, fields)
 , DBInt(DBInt, dbInt)
@@ -120,6 +121,23 @@ put' putData conn = case key putData of
     update' putData conn
     return putData
   Nothing -> insert' putData conn
+
+delete :: DBType a => a -> Handler a
+delete deleteData = do
+  conn <- asks dbConnection
+  liftIO $ delete' deleteData conn
+
+delete' :: forall a. DBType a => a -> Connection -> IO a
+delete' deleteData conn = do
+  executeNamed conn query params
+  return $ setKey deleteData Nothing
+  where
+    query = makeQuery $ T.concat
+      [ "DELETE FROM "
+      , name (undefined :: a)
+      , " WHERE rowid=@rowid"
+      ]
+    params = ["@rowid" := key deleteData]
 
 setupTable :: forall a. DBType a => Connection -> IO a
 setupTable conn = do
