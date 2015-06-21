@@ -29,12 +29,15 @@ import Database.SQLite.Simple ( FromRow(fromRow)
                               , Query(Query, fromQuery)
                               , Connection, open, close
                               , execute, executeNamed, execute_
-                              , queryNamed
+                              , queryNamed, query_
                               , lastInsertRowId
+                              , withTransaction
                               , field
                               , NamedParam((:=))
                               )
 import Database.SQLite.Simple.ToField
+import Database.SQLite.Simple.Types ( Null
+                                    )
 
 import Handler
 
@@ -139,8 +142,20 @@ delete' deleteData conn = do
       ]
     params = ["@rowid" := key deleteData]
 
-setupTable :: forall a. DBType a => Connection -> IO a
-setupTable conn = do
+type TableInfoRow = (Int, T.Text, T.Text, Int, Null, Int)
+
+tableInfo :: forall a. DBType a => Connection -> a -> IO [TableInfoRow]
+tableInfo conn _ =
+  query_ conn query
+  where
+    query = makeQuery $ T.concat
+      [ "PRAGMA table_info('"
+      , name (undefined :: a)
+      , "')"
+      ]
+
+createTable :: forall a. DBType a => Connection -> Text -> IO a
+createTable conn tableName = do
   execute_ conn query
   return undefined
   where
@@ -150,11 +165,78 @@ setupTable conn = do
                                             fields (undefined :: a)
     query = makeQuery $ T.concat
       [ "CREATE TABLE IF NOT EXISTS "
-      , name (undefined :: a)
+      , tableName
       , "("
       , intercalate ", " $ fieldDefs ++ fieldConstraints
       , ")"
       ]
+
+getMigrateFields :: forall a. DBType a => Connection -> a -> IO [Text]
+getMigrateFields conn table = do
+  info <- tableInfo conn table
+  return $ migrateFields info
+  where
+    migrateFields info = map (fieldNameOrDefault info) $ fields table
+
+    fieldNameOrDefault info field@(MkField f) =
+      if fieldExistsInTable info field
+      then keyName f
+      else defaultValue f
+
+    fieldExistsInTable info field = any (fieldMatchesTableInfo field) info
+
+    fieldMatchesTableInfo (MkField f) (_, rowName, rowType, _, _, _) =
+      (keyName f == rowName) && (typeName f == rowType)
+
+migrate :: forall a. DBType a => Connection -> IO a
+migrate conn = do
+  migrateFields <- getMigrateFields conn (undefined :: a)
+  withTransaction conn $ do
+    (createTable conn migrateName) :: IO a
+    execute_ conn $ copyQuery migrateFields
+    execute_ conn dropQuery
+    execute_ conn renameQuery
+  return undefined
+    where
+      migrateName = T.concat [name (undefined :: a), "_migrate"]
+      copyQuery migrateFields = makeQuery $ T.concat
+        [ "INSERT INTO "
+        , migrateName
+        , " SELECT "
+        , T.intercalate ", " migrateFields
+        , " FROM "
+        , name (undefined :: a)
+        ]
+      dropQuery = makeQuery $ T.concat
+        [ "DROP TABLE "
+        , name (undefined :: a)
+        ]
+      renameQuery = makeQuery $ T.concat
+        [ "ALTER TABLE "
+        , migrateName
+        , " RENAME TO "
+        , name (undefined :: a)
+        ]
+
+checkTableExists :: forall a. DBType a => Connection -> a -> IO Bool
+checkTableExists conn table = do
+  results <- (queryNamed conn query params) :: IO [[Text]]
+  return $ length results > 0
+  where
+    query = makeQuery $ T.concat
+      [ "SELECT name"
+      , " FROM sqlite_master"
+      , " WHERE type='table'"
+      , " AND name=@tableName"
+      ]
+    params = ["@tableName" := name (undefined :: a)]
+
+setupTable :: forall a. DBType a => Connection -> IO a
+setupTable conn = do
+  tableExists <- checkTableExists conn (undefined :: a)
+  if tableExists
+  then migrate conn
+  else createTable conn $ name (undefined :: a)
 
 dbSetup :: DBType a => (IO a -> IO ()) -> IO ()
 dbSetup func = do

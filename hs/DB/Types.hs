@@ -15,7 +15,7 @@ module DB.Types
 , DBKey(DBKey, dbKey)
 , DBForeignKey(DBForeignKey, dbForeignKey)
 , DBFieldType
-, keyName, typeName, createStatement, constraints
+, keyName, typeName, defaultValue, createStatement, constraints
 , DBField(MkField)
 , DBType(mkField, setKey, key, name, fields, namedParams, selectors)
 , ToRowDBType(ToRowDBType)
@@ -36,6 +36,7 @@ import GHC.TypeLits
 class (DBType a, ToField f) => DBFieldType a f where
   keyName :: (a -> f) -> Text
   typeName :: (a -> f) -> Text
+  defaultValue :: (a -> f) -> Text
 
   createStatement :: (a -> f) -> Text
   createStatement func = Data.Text.concat [keyName func, " ", typeName func]
@@ -145,37 +146,45 @@ instance DBType a => ToField (DBForeignKey a k) where
 instance DBFieldType a f => DBFieldType a (Maybe f) where
   keyName _ = keyName (undefined :: (a -> f))
   typeName _ = typeName (undefined :: (a -> f))
+  defaultValue _ = "NULL"
   createStatement _ = createStatement (undefined :: (a -> f))
   constraints _ = constraints (undefined :: (a -> f))
 
 instance (DBType a, KnownSymbol k) => DBFieldType a (DBInt k) where
   keyName _ = pack $ symbolVal (undefined :: DBInt k)
   typeName _ = "INTEGER"
+  defaultValue _ = "0"
 
 instance (DBType a, KnownSymbol k) => DBFieldType a (DBText k) where
   keyName _ = pack $ symbolVal (undefined :: DBText k)
   typeName _ = "TEXT"
+  defaultValue _ = "''"
 
 instance (DBType a, KnownSymbol k) => DBFieldType a (DBByteString k) where
   keyName _ = pack $ symbolVal (undefined :: DBByteString k)
   typeName _ = "BLOB"
+  defaultValue _ = "X''"
 
 instance (DBType a, KnownSymbol k) => DBFieldType a (DBDouble k) where
   keyName _ = pack $ symbolVal (undefined :: DBDouble k)
   typeName _ = "REAL"
+  defaultValue _ = "0.0"
 
 instance (DBType a, KnownSymbol k) => DBFieldType a (DBBool k) where
   keyName _ = pack $ symbolVal (undefined :: DBBool k)
   typeName _ = "INTEGER"
+  defaultValue _ = "0"
 
 instance (DBType a, KnownSymbol k) => DBFieldType a (DBDate k) where
   keyName _ = pack $ symbolVal (undefined :: DBDate k)
   typeName _ = "TEXT"
+  defaultValue _ = "datetime('now')"
 
 instance DBType a => DBFieldType a (DBKey a) where
   keyName _ = "rowid"
   typeName _ = "INTEGER"
   createStatement x = Data.Text.concat [keyName x, " ", typeName x, " PRIMARY KEY"]
+  defaultValue _ = error "You can't add DBKeys to a table"
 
 instance forall a k b. (DBType a, DBType b, KnownSymbol k) => DBFieldType a (DBForeignKey b k) where
   keyName _ = pack $ symbolVal (undefined :: DBForeignKey b k)
@@ -188,3 +197,4 @@ instance forall a k b. (DBType a, DBType b, KnownSymbol k) => DBFieldType a (DBF
                        , "(rowid)"
                        ]
     ]
+  defaultValue _ = error "You can't add non-Maybe DBForeignKeys to a table"
