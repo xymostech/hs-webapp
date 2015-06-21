@@ -44,3 +44,7 @@ React.render(<MainApp location={window.location} />, document.body);
 
 window._ = _;
 window.React = React;
+
+if (module.hot) {
+    module.hot.accept();
+}

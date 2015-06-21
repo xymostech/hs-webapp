@@ -1,21 +1,34 @@
+var path = require("path");
+var webpack = require("webpack");
+
+var PORT = 7001;
+
 module.exports = {
-    entry: "./js/app.js",
+    entry: [
+        "webpack-dev-server/client?http://localhost:" + PORT,
+        "webpack/hot/only-dev-server",
+        "./js/app"
+    ],
     output: {
-        path: "./build",
-        filename: "app.js"
+        path: path.join(__dirname, "build"),
+        filename: "bundle.js",
+        publicPath: "http://localhost:7001/"
+    },
+    plugins: [
+        new webpack.HotModuleReplacementPlugin()
+    ],
+    resolve: {
+        extensions: ["", ".js"]
     },
     module: {
         loaders: [
             {
                 test: /\.js$/,
-                exclude: /node_modules/,
-                loader: "babel-loader"
+                include: path.join(__dirname, "js"),
+                loaders: ["babel"]
             }
         ]
     },
-    devServer: {
-        contentBase: "./",
-        port: 7001,
-        hot: true
-    }
+
+    PORT: PORT
 };
