@@ -23,7 +23,7 @@ unknownApiHandler =
 apiHandler :: Request -> Handler Response
 apiHandler req = case (method, path) of
   (methodGet, ["api", "v1", "ping"]) -> Misc.ping req
-  (methodGet, ["api", "v1", "counter"]) -> Counter.dbTest req
+  (methodGet, ["api", "v1", "counter", count]) -> Counter.getCounter req count
   _ -> unknownApiHandler
   where
     method = requestMethod req
