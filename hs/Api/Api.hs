@@ -13,7 +13,8 @@ import Network.Wai               ( Response, Request
 
 import Handler                   (Handler)
 
-import Api.Misc                  (pingHandler, dbTestHandler)
+import qualified Api.Misc as Misc
+import qualified Api.Counter as Counter
 
 unknownApiHandler :: Handler Response
 unknownApiHandler =
@@ -21,8 +22,8 @@ unknownApiHandler =
 
 apiHandler :: Request -> Handler Response
 apiHandler req = case (method, path) of
-  (methodGet, ["api", "v1", "ping"]) -> pingHandler req
-  (methodGet, ["api", "v1", "counter"]) -> dbTestHandler req
+  (methodGet, ["api", "v1", "ping"]) -> Misc.ping req
+  (methodGet, ["api", "v1", "counter"]) -> Counter.dbTest req
   _ -> unknownApiHandler
   where
     method = requestMethod req
