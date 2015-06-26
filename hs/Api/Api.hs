@@ -5,7 +5,6 @@ module Api.Api
 where
 
 import Network.HTTP.Types        (status404)
-import Network.HTTP.Types.Method (methodGet)
 import Network.Wai               ( Response, Request
                                  , requestMethod, pathInfo
                                  , responseLBS
@@ -22,8 +21,9 @@ unknownApiHandler =
 
 apiHandler :: Request -> Handler Response
 apiHandler req = case (method, path) of
-  (methodGet, ["api", "v1", "ping"]) -> Misc.ping req
-  (methodGet, ["api", "v1", "counter", count]) -> Counter.getCounter req count
+  ("GET", ["api", "v1", "ping"]) -> Misc.ping req
+  ("GET", ["api", "v1", "counter", count]) -> Counter.getCounter req count
+  ("PUT", ["api", "v1", "counter", count]) -> Counter.putCounter req count
   _ -> unknownApiHandler
   where
     method = requestMethod req
